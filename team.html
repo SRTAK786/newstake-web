@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team | VNST Staking</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="assets/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <nav class="navbar">
+        <img src="assets/logo.png" alt="VNST Logo" class="logo">
+        <ul id="navMenu">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="stake.html">Stake</a></li>
+            <li><a href="team.html" class="active">Team</a></li>
+            <button class="wallet-connect-btn" id="connectWalletBtn">Connect Wallet</button>
+        </ul>
+        <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+    </nav>
+
+    <main>
+        <section class="content-section">
+            <h2>Your Team</h2>
+            
+            <div class="cards-container">
+                <div class="card">
+                    <h3>Level 1 Team</h3>
+                    <p id="level1Count">0 Members</p>
+                    <p id="level1Status">Status: Locked</p>
+                    <div class="info-text">Condition: 2 Direct Members</div>
+                    <div class="info-text">Total Stake: <span id="level1Stake">0 VNST</span></div>
+                </div>
+                
+                <div class="card">
+                    <h3>Level 2 Team</h3>
+                    <p id="level2Count">0 Members</p>
+                    <p id="level2Status">Status: Locked</p>
+                    <div class="info-text">Condition: 2 Level 1 Members</div>
+                    <div class="info-text">Total Stake: <span id="level2Stake">0 VNST</span></div>
+                </div>
+                
+                <div class="card">
+                    <h3>Level 3 Team</h3>
+                    <p id="level3Count">0 Members</p>
+                    <p id="level3Status">Status: Locked</p>
+                    <div class="info-text">Condition: 2 Level 2 Members</div>
+                    <div class="info-text">Total Stake: <span id="level3Stake">0 VNST</span></div>
+                </div>
+                
+                <div class="card">
+                    <h3>Level 4 Team</h3>
+                    <p id="level4Count">0 Members</p>
+                    <p id="level4Status">Status: Locked</p>
+                    <div class="info-text">Condition: 2 Level 3 Members</div>
+                    <div class="info-text">Total Stake: <span id="level4Stake">0 VNST</span></div>
+                </div>
+                
+                <div class="card">
+                    <h3>Level 5 Team</h3>
+                    <p id="level5Count">0 Members</p>
+                    <p id="level5Status">Status: Locked</p>
+                    <div class="info-text">Condition: 2 Level 4 Members</div>
+                    <div class="info-text">Total Stake: <span id="level5Stake">0 VNST</span></div>
+                </div>
+            </div>
+            
+            <div class="card" style="margin-top: 2rem;">
+                <h3>Team Statistics</h3>
+                <div class="level-details">
+                    <p><strong>Total Team Members:</strong> <span id="totalTeamMembers">0</span></p>
+                    <p><strong>Total Team Stake:</strong> <span id="totalTeamStake">0 VNST</span></p>
+                    <p><strong>Your Current Level:</strong> <span id="userLevel">0</span></p>
+                    <p><strong>Direct Income:</strong> <span id="directIncome">0 USDT</span></p>
+                    <p><strong>ROI of ROI Income:</strong> <span id="roiIncome">0 USDT</span></p>
+                </div>
+                <div class="unlock-status">
+                    <p>As you unlock higher levels, your earning potential increases!</p>
+                </div>
+            </div>
+
+            <!-- New Card Added Here -->
+            <div class="card" style="margin-top: 2rem;">
+                <h3>Detailed Referral Earnings</h3>
+                <p>Total Earnings: <span id="totalReferralEarnings">0</span> USDT</p>
+                <p>Team Deposits: <span id="teamDeposits">0</span> VNST</p>
+                <p>Total Referrals: <span id="totalReferrals">0</span></p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2025 VNST Staking Platform. All rights reserved.</p>
+    </footer>
+
+    <!-- Wallet Connect Modal -->
+    <div class="modal" id="walletModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Connect Wallet</h2>
+            <div class="wallet-options">
+                <button class="wallet-btn" id="metamaskBtn">
+                    <img src="assets/metamask.svg" alt="MetaMask" style="width:30px;height:30px;"> MetaMask
+                </button>
+                <button class="wallet-btn" id="walletConnectBtn">
+                    <img src="assets/walletconnect.svg" alt="WalletConnect" style="width:30px;height:30px;"> WalletConnect
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
