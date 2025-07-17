@@ -499,26 +499,22 @@ async function updateUI() {
 
 async function updateHomePage() {
     try {
-        const totalStaked = await stakingContract.methods.getTotalStaked(accounts[0]).call();
-        if (document.getElementById('totalStaked')) {
-            document.getElementById('totalStaked').textContent = 
-                `${web3.utils.fromWei(totalStaked, 'ether')} VNST`;
-        }
+        // कॉन्ट्रैक्ट से डेटा फ़ेच करें
+        const stats = await stakingContract.methods.getContractStats().call();
         
-        const rewards = await stakingContract.methods.getPendingRewards(accounts[0]).call();
-        if (rewards && document.getElementById('totalRewards')) {
-            const vntRewards = web3.utils.fromWei(rewards[0] || '0', 'ether');
-            const usdtRewards = web3.utils.fromWei(rewards[1] || '0', 'ether');
-            document.getElementById('totalRewards').textContent = 
-                `${vntRewards} VNT + ${usdtRewards} USDT`;
-        }
-        
-        const userInfo = await stakingContract.methods.users(accounts[0]).call();
-        if (document.getElementById('referralCount')) {
-            document.getElementById('referralCount').textContent = userInfo.referralCount;
-        }
+        // डेटा अपडेट करें
+        document.getElementById('totalUsers').textContent = stats[0]; // कुल सदस्य
+        document.getElementById('totalStakedInContract').textContent = 
+            `${web3.utils.fromWei(stats[1], 'ether')} VNST`; // कुल स्टेक्ड VNST
+        document.getElementById('totalVNTWithdrawn').textContent = 
+            `${web3.utils.fromWei(stats[3], 'ether')} VNT`; // कुल विथड्रॉन VNT
+            
     } catch (error) {
-        console.error("Home page update failed:", error);
+        console.error("Error loading contract stats:", error);
+        // ऑप्शनल: यूजर को एरर दिखाएं
+        document.getElementById('totalUsers').textContent = "Error";
+        document.getElementById('totalStakedInContract').textContent = "Error"; 
+        document.getElementById('totalVNTWithdrawn').textContent = "Error";
     }
 }
 
