@@ -20,56 +20,54 @@ let stakingContract;
 let accounts = [];
 let isConnected = false;
 
-// Initialize the application
+// Initialize the application with enhanced error handling
 window.addEventListener('DOMContentLoaded', async () => {
-    console.log("Initializing Web3...");
-    
-    if (window.ethereum) {
-        web3 = new Web3(window.ethereum);
-        try {
-            accounts = await window.ethereum.request({ method: 'eth_accounts' });
-            if (accounts.length > 0) {
-                isConnected = true;
-                updateWalletButton();
-                initContracts();
-                await updateUI();
-            }
-            
-            window.ethereum.on('accountsChanged', (newAccounts) => {
-                accounts = newAccounts;
-                isConnected = accounts.length > 0;
-                updateWalletButton();
-                if (isConnected) updateUI();
-            });
-            
-            window.ethereum.on('chainChanged', () => {
-                window.location.reload();
-            });
-
-            if (window.location.pathname.includes('team.html')) {
-                await loadTeamData();
-                await loadDetailedReferralEarnings();
-            }
-            
-            if (window.location.pathname.includes('stake.html')) {
-                await loadWithdrawHistory();
-                await loadWithdrawLimits();
-            }
-            
-        } catch (error) {
-            console.error("Error connecting to wallet:", error);
+    try {
+        if (window.ethereum) {
+            web3 = new Web3(window.ethereum);
+            await initializeApp();
+        } else if (window.web3) {
+            web3 = new Web3(window.web3.currentProvider);
+            await initializeApp();
+        } else {
+            showErrorToUser("Please install MetaMask or another Web3 provider");
         }
-    } else if (window.web3) {
-        web3 = new Web3(window.web3.currentProvider);
-    } else {
-        console.log('Non-Ethereum browser detected. Consider installing MetaMask!');
+    } catch (error) {
+        handleRpcError(error, "App initialization failed");
     }
+});
 
-    if (isConnected) {
-        await updateUI();
+async function initializeApp() {
+    try {
+        accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+            isConnected = true;
+            updateWalletButton();
+            await initContracts();
+            await updateUI();
+        }
+        
+        setupEventListeners();
+        
+        // Listen for account changes
+        window.ethereum.on('accountsChanged', (newAccounts) => {
+            accounts = newAccounts;
+            isConnected = accounts.length > 0;
+            updateWalletButton();
+            if (isConnected) updateUI();
+        });
+        
+        // Listen for chain changes
+        window.ethereum.on('chainChanged', () => {
+            window.location.reload();
+        });
+
+    } catch (error) {
+        handleRpcError(error);
     }
+}
 
-    // Event Listeners
+function setupEventListeners() {
     connectWalletBtn.addEventListener('click', toggleWalletModal);
     closeModal.addEventListener('click', toggleWalletModal);
     metamaskBtn.addEventListener('click', connectMetaMask);
@@ -77,39 +75,26 @@ window.addEventListener('DOMContentLoaded', async () => {
     mobileMenuBtn.addEventListener('click', toggleMobileMenu);
     
     if (window.location.pathname.includes('stake.html')) {
-        const approveMaxBtn = document.getElementById('approveMaxBtn');
-        const stakeBtn = document.getElementById('stakeBtn');
-        const claimTokenBtn = document.getElementById('claimTokenBtn');
-        const copyReferralBtn = document.getElementById('copyReferralBtn');
-
-        if (approveMaxBtn) approveMaxBtn.addEventListener('click', approveMax);
-        if (stakeBtn) stakeBtn.addEventListener('click', stakeTokens);
-        if (claimTokenBtn) claimTokenBtn.addEventListener('click', claimRewards);
-        if (copyReferralBtn) copyReferralBtn.addEventListener('click', copyReferralLink);
-
-        setupStakingPage();
+        document.getElementById('approveMaxBtn')?.addEventListener('click', approveMax);
+        document.getElementById('stakeBtn')?.addEventListener('click', stakeTokens);
+        document.getElementById('claimTokenBtn')?.addEventListener('click', claimRewards);
+        document.getElementById('copyReferralBtn')?.addEventListener('click', copyReferralLink);
     }
-    
-    if (window.location.pathname.includes('team.html')) {
-        loadTeamData();
-    }
-    
-    animateCardsOnScroll();
-});
+}
 
-// Initialize contracts
-function initContracts() {
+// Initialize contracts with verification
+async function initContracts() {
     try {
-        if (!web3) {
-            console.error("Web3 not initialized");
-            return;
-        }
-
         vnstTokenContract = new web3.eth.Contract(vnstTokenABI, vnstTokenAddress);
         stakingContract = new web3.eth.Contract(stakingABI, stakingAddress);
-        console.log("Contracts initialized successfully");
+        
+        // Verify contracts are properly initialized
+        await Promise.all([
+            vnstTokenContract.methods.name().call(),
+            stakingContract.methods.totalStakedInContract().call()
+        ]);
     } catch (error) {
-        console.error("Error initializing contracts:", error);
+        throw new Error(`Contract initialization failed: ${error.message}`);
     }
 }
 
@@ -125,22 +110,18 @@ function toggleMobileMenu() {
 async function connectMetaMask() {
     try {
         accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        console.log("Connected account:", accounts[0]);
-        
         isConnected = true;
         updateWalletButton();
-        initContracts();
+        await initContracts();
         await updateUI();
-        
         toggleWalletModal();
     } catch (error) {
-        console.error("Connection failed:", error);
-        alert("Connection failed: " + error.message);
+        handleRpcError(error, "Connection failed");
     }
 }
 
 async function connectWalletConnect() {
-    alert("WalletConnect integration would go here in a full implementation");
+    showErrorToUser("WalletConnect integration would go here in a full implementation");
     toggleWalletModal();
 }
 
@@ -155,137 +136,145 @@ function updateWalletButton() {
     }
 }
 
-// Staking functions
+// Enhanced Staking functions with retry logic
 async function approveMax() {
-    if (!isConnected) return alert("Please connect your wallet first");
+    if (!isConnected) return showErrorToUser("Please connect your wallet first");
     
     try {
+        showLoader('stake');
         const maxAmount = web3.utils.toWei('10000', 'ether');
-        const result = await vnstTokenContract.methods.approve(stakingAddress, maxAmount)
-            .send({ from: accounts[0] });
-        console.log("Approval successful:", result);
-        alert("Approval successful! You can now stake VNST tokens.");
+        const result = await withRetry(() => 
+            vnstTokenContract.methods.approve(stakingAddress, maxAmount)
+                .send({ from: accounts[0] })
+        );
+        showErrorToUser("Approval successful! You can now stake VNST tokens.", 'success');
     } catch (error) {
-        console.error("Approval failed:", error);
-        alert("Approval failed: " + error.message);
+        handleRpcError(error, "Approval failed");
+    } finally {
+        hideLoader('stake');
     }
 }
 
 async function stakeTokens() {
-    if (!isConnected) return alert("Please connect your wallet first");
+    if (!isConnected) return showErrorToUser("Please connect your wallet first");
     
     const amount = document.getElementById('stakeAmount')?.value;
     if (!amount || amount < 100 || amount > 10000) {
-        return alert("Please enter a valid amount between 100 and 10,000 VNST");
+        return showErrorToUser("Please enter a valid amount between 100 and 10,000 VNST");
     }
     
     try {
+        showLoader('stake');
         const amountWei = web3.utils.toWei(amount, 'ether');
         const referralAddress = document.getElementById('referralAddress')?.value || accounts[0];
         
         const allowance = await vnstTokenContract.methods.allowance(accounts[0], stakingAddress).call();
         if (parseInt(allowance) < parseInt(amountWei)) {
-            return alert("Please approve the contract to spend your VNST tokens first");
+            return showErrorToUser("Please approve the contract to spend your VNST tokens first");
         }
         
-        const result = await stakingContract.methods.stake(amountWei, referralAddress)
-            .send({ from: accounts[0] });
-        console.log("Staking successful:", result);
-        alert("Staking successful!");
+        const result = await withRetry(() => 
+            stakingContract.methods.stake(amountWei, referralAddress)
+                .send({ from: accounts[0] })
+        );
+        showErrorToUser("Staking successful!", 'success');
         await updateUI();
     } catch (error) {
-        console.error("Staking failed:", error);
-        alert("Staking failed: " + error.message);
+        handleRpcError(error, "Staking failed");
+    } finally {
+        hideLoader('stake');
     }
 }
 
 async function claimRewards() {
-    if (!isConnected) return alert("Please connect your wallet first");
+    if (!isConnected) return showErrorToUser("Please connect your wallet first");
     
     try {
-        const result = await stakingContract.methods.claimRewards()
-            .send({ from: accounts[0] });
-        console.log("Rewards claimed:", result);
-        alert("Rewards claimed successfully!");
+        showLoader('stake');
+        const result = await withRetry(() => 
+            stakingContract.methods.claimRewards().send({ from: accounts[0] })
+        );
+        showErrorToUser("Rewards claimed successfully!", 'success');
         await updateUI();
     } catch (error) {
-        console.error("Claim failed:", error);
-        alert("Claim failed: " + error.message);
+        handleRpcError(error, "Claim failed");
+    } finally {
+        hideLoader('stake');
     }
 }
 
-// Team Page Functions - UPDATED
+// Enhanced Team Page Functions with retry logic
 async function loadTeamData() {
-    if (!isConnected || !accounts[0] || !stakingContract) {
-        console.log("Not connected or contracts not initialized");
-        return;
-    }
-    
     try {
-        const [levelDetails, userLevel, userInfo, totalTeamStake, referralEarnings] = await Promise.all([
-            stakingContract.methods.getLevelDetails(accounts[0]).call(),
-            stakingContract.methods.curUserLevel(accounts[0]).call(),
-            stakingContract.methods.users(accounts[0]).call(),
-            stakingContract.methods.getTotalTeamStake(accounts[0]).call(),
-            stakingContract.methods.getReferralEarnings(accounts[0]).call()
+        showLoader('team');
+        
+        const [userInfo, totalTeamStake, referralEarnings] = await Promise.all([
+            withRetry(() => stakingContract.methods.users(accounts[0]).call()),
+            withRetry(() => stakingContract.methods.getTotalTeamStake(accounts[0]).call()),
+            withRetry(() => stakingContract.methods.getReferralEarnings(accounts[0]).call())
         ]);
 
-        document.getElementById('userLevel').textContent = userLevel;
-        
-        for (let level = 1; level <= 5; level++) {
-            const levelIndex = level - 1;
-            try {
-                const teamMembers = await stakingContract.methods.getTeamUsers(accounts[0], levelIndex).call();
-                let levelStake = 0;
-                
-                for (const member of teamMembers) {
-                    const stake = await stakingContract.methods.getTotalStaked(member).call();
-                    levelStake += parseFloat(web3.utils.fromWei(stake, 'ether'));
-                }
-
-                document.getElementById(`level${level}Count`).textContent = `${teamMembers.length} Members`;
-                document.getElementById(`level${level}Status`).textContent = 
-                    levelDetails.levelsAchieved[levelIndex] ? "Unlocked" : "Locked";
-                document.getElementById(`level${level}Status`).style.color = 
-                    levelDetails.levelsAchieved[levelIndex] ? "#4CAF50" : "#F44336";
-                document.getElementById(`level${level}Stake`).textContent = 
-                    `${levelStake.toFixed(2)} VNST`;
-                    
-            } catch (error) {
-                console.error(`Level ${level} loading error:`, error);
-                document.getElementById(`level${level}Count`).textContent = "0 Members";
-                document.getElementById(`level${level}Status`).textContent = "Locked";
-                document.getElementById(`level${level}Status`).style.color = "#F44336";
-                document.getElementById(`level${level}Stake`).textContent = "0 VNST";
-            }
-        }
-
+        // Update basic team info
         document.getElementById('totalTeamMembers').textContent = userInfo.referralCount;
-        document.getElementById('totalTeamStake').textContent = 
-            `${web3.utils.fromWei(totalTeamStake, 'ether')} VNST`;
-        
-        document.getElementById('totalReferralEarnings').textContent = 
-            `${web3.utils.fromWei(referralEarnings[0], 'ether')} USDT`;
-        document.getElementById('teamDeposits').textContent = 
-            `${web3.utils.fromWei(referralEarnings[1], 'ether')} VNST`;
+        document.getElementById('totalTeamStake').textContent = formatAmount(totalTeamStake) + ' VNST';
+        document.getElementById('totalReferralEarnings').textContent = formatAmount(referralEarnings[0]) + ' USDT';
+        document.getElementById('teamDeposits').textContent = formatAmount(referralEarnings[1]) + ' VNST';
         document.getElementById('totalReferrals').textContent = referralEarnings[2];
-        
+
+        // Load level-wise data
+        await loadLevelData(1);
+        await loadLevelData(2);
+        await loadLevelData(3);
+        await loadLevelData(4);
+        await loadLevelData(5);
+
+        // Calculate incomes
         const directIncome = await calculateDirectIncome();
-        document.getElementById('directIncome').textContent = 
-            `${web3.utils.fromWei(directIncome, 'ether')} USDT`;
+        document.getElementById('directIncome').textContent = formatAmount(directIncome) + ' USDT';
         
         const roiIncome = await calculateROIIncome();
-        document.getElementById('roiIncome').textContent = 
-            `${web3.utils.fromWei(roiIncome, 'ether')} USDT`;
+        document.getElementById('roiIncome').textContent = formatAmount(roiIncome) + ' USDT';
+
+    } catch (error) {
+        handleRpcError(error, 'Failed to load team data');
+    } finally {
+        hideLoader('team');
+    }
+}
+
+async function loadLevelData(level) {
+    try {
+        const levelIndex = level - 1;
+        const [levelDetails, teamMembers] = await Promise.all([
+            withRetry(() => stakingContract.methods.getLevelDetails(accounts[0]).call()),
+            withRetry(() => stakingContract.methods.getTeamUsers(accounts[0], levelIndex).call())
+        ]);
+
+        let levelStake = 0;
+        for (const member of teamMembers) {
+            const stake = await withRetry(() => stakingContract.methods.getTotalStaked(member).call());
+            levelStake += parseFloat(formatAmount(stake));
+        }
+
+        updateLevelUI(level, {
+            count: teamMembers.length,
+            status: levelDetails.levelsAchieved[levelIndex] ? "Unlocked" : "Locked",
+            stake: levelStake.toFixed(2) + ' VNST'
+        });
         
     } catch (error) {
-        console.error("Team data loading failed:", error);
+        updateLevelUI(level, {
+            count: "Error",
+            status: "Error",
+            stake: "Error"
+        });
+        console.error(`Level ${level} data loading failed:`, error);
     }
 }
 
 async function calculateROIIncome() {
     try {
-        const userInfo = await stakingContract.methods.users(accounts[0]).call();
+        const userInfo = await withRetry(() => stakingContract.methods.users(accounts[0]).call());
         const totalClaimed = userInfo.totalClaimed;
         const roiIncome = web3.utils.toBN(totalClaimed).mul(web3.utils.toBN(2)).div(web3.utils.toBN(100));
         return roiIncome.toString();
@@ -297,7 +286,7 @@ async function calculateROIIncome() {
 
 async function calculateDirectIncome() {
     try {
-        const userInfo = await stakingContract.methods.users(accounts[0]).call();
+        const userInfo = await withRetry(() => stakingContract.methods.users(accounts[0]).call());
         let totalDirectIncome = web3.utils.toBN(0);
         
         for (let i = 0; i < 5; i++) {
@@ -318,44 +307,24 @@ async function calculateDirectIncome() {
     }
 }
 
-// Staking Page Functions
+// Enhanced Staking Page Functions
 async function setupStakingPage() {
-    if (!isConnected || !accounts[0] || !stakingContract) return;
-    
     try {
-        const stakesCount = await stakingContract.methods.getUserStakesCount(accounts[0]).call();
-        const stakesList = document.getElementById('stakesList');
-        stakesList.innerHTML = '';
+        showLoader('stake');
         
-        let totalActive = 0;
-        if (stakesCount > 0) {
-            for (let i = 0; i < stakesCount; i++) {
-                const stake = await stakingContract.methods.userStakes(accounts[0], i).call();
-                if (stake.isActive) {
-                    const stakeAmount = web3.utils.fromWei(stake.amount, 'ether');
-                    totalActive += parseFloat(stakeAmount);
+        const [stakesCount, rewards, withdrawLimits] = await Promise.all([
+            withRetry(() => stakingContract.methods.getUserStakesCount(accounts[0]).call()),
+            withRetry(() => stakingContract.methods.getPendingRewards(accounts[0]).call()),
+            withRetry(() => stakingContract.methods.getMinWithdrawInfo().call())
+        ]);
 
-                    const currentDay = Math.floor(Date.now() / 86400);
-                    const daysStaked = currentDay - stake.startDay;
-                    
-                    stakesList.innerHTML += `
-                        <div class="stake-item">
-                            <p><strong>Stake #${i+1}:</strong> ${stakeAmount} VNST</p>
-                            <p>Days staked: ${stake.daysStaked || 0}/365</p>
-                        </div>
-                    `;
-                }
-            }
-        } else {
-            stakesList.innerHTML = '<p>No active stakes found</p>';
-        }
+        // Load stake details
+        await loadStakes(stakesCount);
         
-        document.getElementById('totalActiveStake').textContent = `${totalActive} VNST`;
-        
-        const rewards = await stakingContract.methods.getPendingRewards(accounts[0]).call();
-        if (Array.isArray(rewards)) {
-            const vntRewards = web3.utils.fromWei(rewards[0] || '0', 'ether');
-            const usdtRewards = web3.utils.fromWei(rewards[1] || '0', 'ether');
+        // Process rewards
+        if (rewards) {
+            const vntRewards = formatAmount(rewards[0]);
+            const usdtRewards = formatAmount(rewards[1]);
             
             document.getElementById('stakingRewards').textContent = `${vntRewards} VNT`;
             document.getElementById('totalPendingRewards').textContent = `${vntRewards} VNT + ${usdtRewards} USDT`;
@@ -366,26 +335,68 @@ async function setupStakingPage() {
             document.getElementById('directRewards').textContent = `${directRewards} USDT`;
             document.getElementById('roiRewards').textContent = `${roiRewards} USDT`;
         }
-        
+
+        // Set withdrawal limits
+        document.getElementById('minVNTWithdraw').textContent = `${formatAmount(withdrawLimits[0])} VNT`;
+        document.getElementById('minUSDTWithdraw').textContent = `${formatAmount(withdrawLimits[1])} USDT`;
+
+        // Set referral link
         document.getElementById('referralLink').value = 
             `${window.location.origin}/stake.html?ref=${accounts[0]}`;
-            
+
     } catch (error) {
-        console.error("Error setting up staking page:", error);
+        handleRpcError(error, 'Failed to load staking data');
+    } finally {
+        hideLoader('stake');
+    }
+}
+
+async function loadStakes(stakesCount) {
+    const stakesList = document.getElementById('stakesList');
+    stakesList.innerHTML = '';
+    
+    let totalActive = 0;
+    if (stakesCount > 0) {
+        for (let i = 0; i < stakesCount; i++) {
+            try {
+                const stake = await withRetry(() => 
+                    stakingContract.methods.userStakes(accounts[0], i).call()
+                );
+                if (stake.isActive) {
+                    const stakeAmount = formatAmount(stake.amount);
+                    totalActive += parseFloat(stakeAmount);
+
+                    stakesList.innerHTML += `
+                        <div class="stake-item">
+                            <p><strong>Stake #${i+1}:</strong> ${stakeAmount} VNST</p>
+                            <p>Days staked: ${stake.daysStaked || 0}/365</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error(`Error loading stake #${i}:`, error);
+                continue;
+            }
+        }
+    }
+    
+    document.getElementById('totalActiveStake').textContent = `${totalActive} VNST`;
+    if (stakesList.innerHTML === '') {
+        stakesList.innerHTML = '<p>No active stakes found</p>';
     }
 }
 
 async function loadWithdrawHistory() {
-    if (!isConnected || !accounts[0]) return;
-    
     try {
-        const history = await stakingContract.methods.getWithdrawHistory(accounts[0]).call();
+        const history = await withRetry(() => 
+            stakingContract.methods.getWithdrawHistory(accounts[0]).call()
+        );
         const historyList = document.getElementById('withdrawHistoryList');
         historyList.innerHTML = '';
 
         if (history && history.length > 0) {
             history.forEach((tx, index) => {
-                const amount = web3.utils.fromWei(tx.amount, 'ether');
+                const amount = formatAmount(tx.amount);
                 const date = new Date(tx.timestamp * 1000).toLocaleString();
                 historyList.innerHTML += `
                     <div class="history-item">
@@ -399,62 +410,7 @@ async function loadWithdrawHistory() {
             historyList.innerHTML = '<p>No withdrawal history found.</p>';
         }
     } catch (error) {
-        console.error("Error loading withdrawal history:", error);
-    }
-}
-
-async function loadWithdrawLimits() {
-    if (!isConnected) return;
-    
-    try {
-        const [minVNT, minUSDT, isActive] = await stakingContract.methods.getMinWithdrawInfo().call();
-        document.getElementById('minVNTWithdraw').textContent = `${web3.utils.fromWei(minVNT, 'ether')} VNT`;
-        document.getElementById('minUSDTWithdraw').textContent = `${web3.utils.fromWei(minUSDT, 'ether')} USDT`;
-    } catch (error) {
-        console.error("Error loading withdrawal limits:", error);
-    }
-}
-
-async function loadDetailedReferralEarnings() {
-    if (!isConnected || !accounts[0]) return;
-    
-    try {
-        const [totalEarnings, teamDeposits, referralCount] = 
-            await stakingContract.methods.getReferralEarnings(accounts[0]).call();
-        
-        document.getElementById('totalReferralEarnings').textContent = 
-            web3.utils.fromWei(totalEarnings, 'ether');
-        document.getElementById('teamDeposits').textContent = 
-            web3.utils.fromWei(teamDeposits, 'ether');
-        document.getElementById('totalReferrals').textContent = referralCount;
-    } catch (error) {
-        console.error("Error loading referral earnings:", error);
-    }
-}
-
-async function loadDetailedStakeHistory() {
-    if (!isConnected || !accounts[0]) return;
-    
-    try {
-        const history = await stakingContract.methods.getStakeHistory(accounts[0]).call();
-        const historyDiv = document.getElementById('detailedStakeHistory');
-        historyDiv.innerHTML = '';
-
-        if (history.amounts.length > 0) {
-            history.amounts.forEach((amount, index) => {
-                historyDiv.innerHTML += `
-                    <div class="stake-item">
-                        <p><strong>Stake #${index + 1}:</strong> ${web3.utils.fromWei(amount, 'ether')} VNST</p>
-                        <p>Start Day: ${history.startDays[index]}</p>
-                        <p>Status: ${history.isActive[index] ? 'Active' : 'Inactive'}</p>
-                    </div>
-                `;
-            });
-        } else {
-            historyDiv.innerHTML = '<p>No stake history found.</p>';
-        }
-    } catch (error) {
-        console.error("Error loading stake history:", error);
+        handleRpcError(error, "Error loading withdrawal history");
     }
 }
 
@@ -466,18 +422,18 @@ async function updateUI() {
     }
 
     try {
-        console.log("Updating UI...");
-        
         if (!vnstTokenContract || !stakingContract) {
-            initContracts();
+            await initContracts();
         }
         
         updateWalletButton();
         
         if (document.getElementById('walletBalance')) {
-            const balance = await vnstTokenContract.methods.balanceOf(accounts[0]).call();
+            const balance = await withRetry(() => 
+                vnstTokenContract.methods.balanceOf(accounts[0]).call()
+            );
             document.getElementById('walletBalance').textContent = 
-                `${web3.utils.fromWei(balance, 'ether')} VNST`;
+                `${formatAmount(balance)} VNST`;
         }
         
         if (window.location.pathname.includes('team.html')) {
@@ -487,43 +443,114 @@ async function updateUI() {
         else if (window.location.pathname.includes('stake.html')) {
             await setupStakingPage();
             await loadWithdrawHistory();
-            await loadWithdrawLimits();
         }
         else {
             await updateHomePage();
         }
         
     } catch (error) {
-        console.error("UI update failed:", error);
+        handleRpcError(error, "UI update failed");
     }
 }
 
 async function updateHomePage() {
     try {
-        const stats = await stakingContract.methods.getContractStats().call();
+        const stats = await withRetry(() => 
+            stakingContract.methods.getContractStats().call()
+        );
         
         document.getElementById('totalUsers').textContent = stats[0];
         document.getElementById('totalStakedInContract').textContent = 
-            `${web3.utils.fromWei(stats[1], 'ether')} VNST`;
+            `${formatAmount(stats[1])} VNST`;
         document.getElementById('totalVNTWithdrawn').textContent = 
-            `${web3.utils.fromWei(stats[3], 'ether')} VNT`;
+            `${formatAmount(stats[3])} VNT`;
             
     } catch (error) {
-        console.error("Error loading contract stats:", error);
+        handleRpcError(error, "Error loading contract stats");
         document.getElementById('totalUsers').textContent = "Error";
         document.getElementById('totalStakedInContract').textContent = "Error"; 
         document.getElementById('totalVNTWithdrawn').textContent = "Error";
     }
 }
 
+async function loadDetailedReferralEarnings() {
+    try {
+        const [totalEarnings, teamDeposits, referralCount] = await withRetry(() => 
+            stakingContract.methods.getReferralEarnings(accounts[0]).call()
+        );
+        
+        document.getElementById('totalReferralEarnings').textContent = formatAmount(totalEarnings);
+        document.getElementById('teamDeposits').textContent = formatAmount(teamDeposits);
+        document.getElementById('totalReferrals').textContent = referralCount;
+    } catch (error) {
+        handleRpcError(error, "Error loading referral earnings");
+    }
+}
+
 // Utility functions
+function formatAmount(amount, decimals = 18) {
+    try {
+        return web3.utils.fromWei(amount.toString(), 'ether');
+    } catch {
+        return "0";
+    }
+}
+
+async function withRetry(fn, retries = 3, delay = 1000) {
+    try {
+        return await fn();
+    } catch (error) {
+        if (retries <= 0) throw error;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return withRetry(fn, retries - 1, delay * 2);
+    }
+}
+
+function handleRpcError(error, customMessage = null) {
+    console.error(customMessage || "RPC Error:", error);
+    
+    let userMessage = customMessage || "Blockchain operation failed";
+    
+    if (error.message.includes("missing trie node")) {
+        userMessage = "Network sync issue. Please try again later.";
+    } else if (error.code === -32603) {
+        userMessage = "Transaction failed. Check your gas settings.";
+    } else if (error.message.includes("User denied transaction")) {
+        userMessage = "Transaction was cancelled by user.";
+    }
+    
+    showErrorToUser(userMessage);
+}
+
+function showErrorToUser(message, type = 'error') {
+    const errorElement = document.getElementById('errorDisplay');
+    if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+        errorElement.style.color = type === 'success' ? '#4CAF50' : '#F44336';
+        setTimeout(() => errorElement.style.display = 'none', 5000);
+    } else {
+        alert(message);
+    }
+}
+
+function showLoader(page) {
+    const loader = document.getElementById(`${page}Loader`);
+    if (loader) loader.style.display = 'block';
+}
+
+function hideLoader(page) {
+    const loader = document.getElementById(`${page}Loader`);
+    if (loader) loader.style.display = 'none';
+}
+
 function copyReferralLink() {
     const referralLinkInput = document.getElementById('referralLink');
     if (!referralLinkInput) return;
     
     referralLinkInput.select();
     document.execCommand('copy');
-    alert("Referral link copied to clipboard!");
+    showErrorToUser("Referral link copied to clipboard!", 'success');
 }
 
 function animateCardsOnScroll() {
@@ -538,3 +565,6 @@ function animateCardsOnScroll() {
     
     cards.forEach(card => observer.observe(card));
 }
+
+// Initialize animations
+animateCardsOnScroll();
