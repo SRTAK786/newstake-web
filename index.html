@@ -22,25 +22,27 @@
 
     <main>
         <section class="content-section">
-            <h2>VNST Staking Platform</h2>
-            <div class="cards-container">
-                <div class="card">
-                    <h3>Total Members</h3>
-                    <p id="totalUsers">Loading...</p>
-                    <div class="info-text">Total users joined</div>
-                </div>
-                <div class="card">
-                    <h3>Total VNST Staked</h3>
-                    <p id="totalStakedInContract">Loading...</p>
-                    <div class="info-text">Across all users</div>
-                </div>
-                <div class="card">
-                    <h3>Total VNT Withdrawn</h3>
-                    <p id="totalVNTWithdrawn">Loading...</p>
-                    <div class="info-text">From contract</div>
-                </div>
+          <h2>VNST Staking Overview</h2>
+          <div class="stats-container">
+            <div class="stat-card pulse">
+              <h3>Total Members</h3>
+              <div class="value" id="totalUsers">0</div>
+              <div class="label">Users joined our platform</div>
             </div>
-            
+    
+            <div class="stat-card pulse">
+              <h3>Total VNST Staked</h3>
+              <div class="value" id="totalStakedInContract">0 VNST</div>
+              <div class="label">Across all users</div>
+            </div>
+    
+            <div class="stat-card pulse">
+              <h3>Total VNT Withdrawn</h3>
+              <div class="value" id="totalVNTWithdrawn">0 VNT</div>
+              <div class="label">From contract</div>
+            </div>
+          </div>
+   
             <div style="text-align: center; margin-top: 3rem;">
                 <a href="stake.html" class="btn">Start Staking Now</a>
             </div>
