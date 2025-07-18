@@ -375,7 +375,7 @@ async function setupStakingPage() {
               <p>Days staked: ${daysStaked}/365</p>
               <p>Start date: ${new Date(stake.startTime * 1000).toLocaleDateString()}</p>
             </div>
-          `;
+
         }
       }
     } else {
