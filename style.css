@@ -44,20 +44,6 @@ body::before {
   animation:particleMove 100s linear infinite;
 }
 
-/* Navbar and header styles from old CSS */
-.navbar {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  background:rgba(0,31,63,0.9);
-  padding:1rem 2rem;
-  position:sticky;
-  top:0; z-index:1000;
-  box-shadow:0 2px 20px rgba(0,0,0,0.5);
-  backdrop-filter:blur(10px);
-  border-bottom:1px solid var(--glass-border);
-}
-
 .navbar {
   display: flex;
   flex-direction: column;
