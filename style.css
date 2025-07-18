@@ -1,0 +1,331 @@
+/* Updated CSS with new design elements */
+:root {
+  --primary-color: #0a192f;
+  --secondary-color: #64ffda;
+  --accent-color: #1e90ff;
+  --text-color: #ccd6f6;
+  --card-bg: rgba(10, 25, 47, 0.7);
+  --footer-bg: #020c1b;
+  --hover-color: #64ffda;
+  --glass-effect: rgba(100, 255, 218, 0.1);
+  --glass-border: rgba(100, 255, 218, 0.2);
+  --neon-glow: 0 0 15px rgba(100, 255, 218, 0.5);
+  --button-glow: 0 0 20px rgba(100, 255, 218, 0.7);
+  --success-color: #2ecc71;
+  --warning-color: #f39c12;
+  --info-color: #3498db;
+}
+
+/* Home Page Stats Cards */
+.stats-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin: 3rem 0;
+}
+
+.stat-card {
+  background: var(--card-bg);
+  border-radius: 15px;
+  padding: 2rem;
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--neon-glow);
+}
+
+.stat-card h3 {
+  color: var(--accent-color);
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.stat-card .value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--secondary-color);
+  margin: 1rem 0;
+  background: linear-gradient(135deg, var(--accent-color), var(--secondary-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.stat-card .label {
+  color: var(--text-color);
+  opacity: 0.8;
+  font-size: 0.9rem;
+}
+
+/* Staking Page Cards */
+.staking-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.stake-card {
+  background: var(--card-bg);
+  border-radius: 15px;
+  padding: 2rem;
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.stake-card h3 {
+  color: var(--accent-color);
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  border-bottom: 2px solid var(--glass-border);
+  padding-bottom: 0.5rem;
+}
+
+.stake-info {
+  margin: 1.5rem 0;
+}
+
+.stake-info-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed var(--glass-border);
+}
+
+.stake-info-item .label {
+  color: var(--text-color);
+  opacity: 0.8;
+}
+
+.stake-info-item .value {
+  color: var(--secondary-color);
+  font-weight: 600;
+}
+
+.progress-container {
+  margin: 1.5rem 0;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+}
+
+.progress-bar {
+  height: 10px;
+  background: rgba(100, 255, 218, 0.2);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-color), var(--secondary-color));
+  border-radius: 5px;
+  transition: width 0.5s ease;
+}
+
+/* Reward Breakdown Card */
+.rewards-card {
+  background: var(--card-bg);
+  border-radius: 15px;
+  padding: 2rem;
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+}
+
+.reward-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 0.8rem;
+  background: rgba(30, 144, 255, 0.1);
+  border-radius: 8px;
+}
+
+.reward-item .type {
+  color: var(--text-color);
+}
+
+.reward-item .amount {
+  color: var(--secondary-color);
+  font-weight: 600;
+}
+
+/* Team Page Cards */
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.team-card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.team-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--neon-glow);
+}
+
+.team-card h4 {
+  color: var(--accent-color);
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+}
+
+.team-card h4 svg {
+  margin-right: 0.5rem;
+}
+
+.team-stats {
+  margin-top: 1rem;
+}
+
+.team-stat {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.team-stat .label {
+  color: var(--text-color);
+  opacity: 0.8;
+  font-size: 0.9rem;
+}
+
+.team-stat .value {
+  color: var(--secondary-color);
+  font-weight: 600;
+}
+
+/* Level Cards */
+.level-card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid var(--accent-color);
+}
+
+.level-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.level-title {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.level-status {
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-unlocked {
+  background: rgba(46, 204, 113, 0.2);
+  color: var(--success-color);
+}
+
+.status-locked {
+  background: rgba(243, 156, 18, 0.2);
+  color: var(--warning-color);
+}
+
+.level-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.level-detail {
+  background: rgba(30, 144, 255, 0.1);
+  padding: 0.8rem;
+  border-radius: 8px;
+}
+
+.level-detail .label {
+  font-size: 0.8rem;
+  color: var(--text-color);
+  opacity: 0.8;
+}
+
+.level-detail .value {
+  font-size: 1.2rem;
+  color: var(--secondary-color);
+  font-weight: 600;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .stats-container, .staking-container, .team-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .level-details {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Animations */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Button Enhancements */
+.claim-btn {
+  background: linear-gradient(135deg, var(--success-color), #27ae60);
+  box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+  width: 100%;
+  margin-top: 1.5rem;
+}
+
+.claim-btn:hover {
+  box-shadow: 0 8px 25px rgba(46, 204, 113, 0.6), 0 0 15px rgba(46, 204, 113, 0.7);
+}
+
+.withdraw-info {
+  font-size: 0.8rem;
+  color: var(--text-color);
+  opacity: 0.7;
+  text-align: center;
+  margin-top: 1rem;
+}
