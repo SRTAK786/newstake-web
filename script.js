@@ -375,7 +375,7 @@ async function setupStakingPage() {
               <p>Days staked: ${daysStaked}/365</p>
               <p>Start date: ${new Date(stake.startTime * 1000).toLocaleDateString()}</p>
             </div>
-
+          `;
         }
       }
     } else {
@@ -396,7 +396,7 @@ async function setupStakingPage() {
         `${parseFloat(vntRewards).toFixed(4)} VNT + ${parseFloat(usdtRewards).toFixed(4)} USDT`;
       
       const directRewards = (parseFloat(usdtRewards) * 0.5;
-      const roiRewards = (parseFloat(usdtRewards) * 0.5;
+      const roiRewards = (parseFloat(usdtRewards) * 0.5);
       
       document.getElementById('directRewards').textContent = `${directRewards.toFixed(4)} USDT`;
       document.getElementById('roiRewards').textContent = `${roiRewards.toFixed(4)} USDT`;
