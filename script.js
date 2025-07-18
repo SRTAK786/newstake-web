@@ -318,61 +318,108 @@ async function calculateDirectIncome() {
 
 // Staking Page Functions
 async function setupStakingPage() {
-    if (!isConnected || !accounts[0] || !stakingContract) return;
-    
-    try {
-        const stakesCount = await stakingContract.methods.getUserStakesCount(accounts[0]).call();
-        const stakesList = document.getElementById('stakesList');
-        stakesList.innerHTML = '';
-        
-        let totalActive = 0;
-        if (stakesCount > 0) {
-            for (let i = 0; i < stakesCount; i++) {
-                const stake = await stakingContract.methods.userStakes(accounts[0], i).call();
-                if (stake.isActive) {
-                    const stakeAmount = web3.utils.fromWei(stake.amount, 'ether');
-                    totalActive += parseFloat(stakeAmount);
+  // First check if elements exist
+  const stakeForm = document.getElementById('stakeForm');
+  const stakesList = document.getElementById('stakesList');
+  
+  if (!stakeForm || !stakesList) {
+    console.error("Required elements not found");
+    return;
+  }
 
-                    const currentDay = Math.floor(Date.now() / 86400);
-                    const daysStaked = currentDay - stake.startDay;
-                    
-                    stakesList.innerHTML += `
-                        <div class="stake-item">
-                            <p><strong>Stake #${i+1}:</strong> ${stakeAmount} VNST</p>
-                            <p>Days staked: ${stake.daysStaked || 0}/365</p>
-                        </div>
-                    `;
-                }
-            }
-        } else {
-            stakesList.innerHTML = '<p>No active stakes found</p>';
+  // Check wallet connection
+  if (!isConnected || !accounts[0] || !stakingContract) {
+    stakeForm.innerHTML = `
+      <div class="connect-warning">
+        <p>Please connect your wallet to view staking details</p>
+      </div>
+    `;
+    return;
+  }
+  
+  try {
+    // Set up the staking form
+    stakeForm.innerHTML = `
+      <div class="staking-form">
+        <input type="number" class="stake-input" placeholder="Enter VNST amount" id="stakeAmountInput">
+        
+        <div class="referral-box">
+          <input type="text" class="stake-input" placeholder="Referral address (optional)" id="referralInput">
+        </div>
+        
+        <button class="stake-btn" id="approveBtn">APPROVE VNST</button>
+        <button class="stake-btn" id="stakeBtn">STAKE VNST</button>
+        
+        <div class="staked-amount">
+          <span id="totalActiveStake">0 VNST</span> staked
+        </div>
+      </div>
+    `;
+
+    // Load user's staking data
+    stakesList.innerHTML = '';
+    const stakesCount = await stakingContract.methods.getUserStakesCount(accounts[0]).call();
+    let totalActive = 0;
+
+    if (stakesCount > 0) {
+      for (let i = 0; i < stakesCount; i++) {
+        const stake = await stakingContract.methods.userStakes(accounts[0], i).call();
+        if (stake.isActive) {
+          const stakeAmount = web3.utils.fromWei(stake.amount, 'ether');
+          totalActive += parseFloat(stakeAmount);
+          const daysStaked = Math.floor((Date.now() / 1000 - stake.startTime) / 86400);
+          
+          stakesList.innerHTML += `
+            <div class="stake-item">
+              <p><strong>Stake #${i+1}:</strong> ${stakeAmount} VNST</p>
+              <p>Days staked: ${daysStaked}/365</p>
+              <p>Start date: ${new Date(stake.startTime * 1000).toLocaleDateString()}</p>
+            </div>
+          `;
         }
-        
-        document.getElementById('totalActiveStake').textContent = `${totalActive} VNST`;
-        
-        const rewards = await stakingContract.methods.getPendingRewards(accounts[0]).call();
-        if (Array.isArray(rewards)) {
-            const vntRewards = web3.utils.fromWei(rewards[0] || '0', 'ether');
-            const usdtRewards = web3.utils.fromWei(rewards[1] || '0', 'ether');
-            
-            document.getElementById('stakingRewards').textContent = `${vntRewards} VNT`;
-            document.getElementById('totalPendingRewards').textContent = `${vntRewards} VNT + ${usdtRewards} USDT`;
-            
-            const directRewards = (parseFloat(usdtRewards) * 0.5).toFixed(4);
-            const roiRewards = (parseFloat(usdtRewards) * 0.5).toFixed(4);
-            
-            document.getElementById('directRewards').textContent = `${directRewards} USDT`;
-            document.getElementById('roiRewards').textContent = `${roiRewards} USDT`;
-        }
-        
-        document.getElementById('referralLink').value = 
-            `${window.location.origin}/stake.html?ref=${accounts[0]}`;
-            
-    } catch (error) {
-        console.error("Error setting up staking page:", error);
+      }
+    } else {
+      stakesList.innerHTML = '<p class="no-stakes">No active stakes found</p>';
     }
-}
+    
+    // Update totals display
+    document.getElementById('totalActiveStake').textContent = totalActive.toFixed(2);
 
+    // Load rewards data
+    const rewards = await stakingContract.methods.getPendingRewards(accounts[0]).call();
+    if (Array.isArray(rewards)) {
+      const vntRewards = web3.utils.fromWei(rewards[0] || '0', 'ether');
+      const usdtRewards = web3.utils.fromWei(rewards[1] || '0', 'ether');
+      
+      document.getElementById('stakingRewards').textContent = `${parseFloat(vntRewards).toFixed(4)} VNT`;
+      document.getElementById('totalPendingRewards').textContent = 
+        `${parseFloat(vntRewards).toFixed(4)} VNT + ${parseFloat(usdtRewards).toFixed(4)} USDT`;
+      
+      const directRewards = (parseFloat(usdtRewards) * 0.5;
+      const roiRewards = (parseFloat(usdtRewards) * 0.5;
+      
+      document.getElementById('directRewards').textContent = `${directRewards.toFixed(4)} USDT`;
+      document.getElementById('roiRewards').textContent = `${roiRewards.toFixed(4)} USDT`;
+    }
+    
+    // Set referral link
+    document.getElementById('referralLink').value = 
+      `${window.location.origin}/stake.html?ref=${accounts[0]}`;
+      
+    // Add event listeners to new buttons
+    document.getElementById('approveBtn').addEventListener('click', approveTokens);
+    document.getElementById('stakeBtn').addEventListener('click', stakeTokens);
+    
+  } catch (error) {
+    console.error("Error setting up staking page:", error);
+    stakeForm.innerHTML = `
+      <div class="error-message">
+        <p>Error loading staking data. Please try again later.</p>
+        <button onclick="setupStakingPage()">Retry</button>
+      </div>
+    `;
+  }
+}
 // New Functions Added Here
 async function loadWithdrawHistory() {
   if (!isConnected || !accounts[0]) return;
@@ -403,14 +450,18 @@ async function loadWithdrawHistory() {
 }
 
 async function loadWithdrawLimits() {
-  if (!isConnected) return;
-  
   try {
-    const [minVNT, minUSDT, isActive] = await stakingContract.methods.getMinWithdrawInfo().call();
-    document.getElementById('minVNTWithdraw').textContent = `${web3.utils.fromWei(minVNT, 'ether')} VNT`;
-    document.getElementById('minUSDTWithdraw').textContent = `${web3.utils.fromWei(minUSDT, 'ether')} USDT`;
+    const limits = await contract.methods.getWithdrawLimits().call();
+    // Add proper error handling if limits is not in expected format
+    if (limits && limits.length >= 2) {
+      document.getElementById('minWithdrawVNT').textContent = limits[0];
+      document.getElementById('minWithdrawUSDT').textContent = limits[1];
+    }
   } catch (error) {
     console.error("Error loading withdrawal limits:", error);
+    // Set default values if error occurs
+    document.getElementById('minWithdrawVNT').textContent = "10";
+    document.getElementById('minWithdrawUSDT').textContent = "5";
   }
 }
 
