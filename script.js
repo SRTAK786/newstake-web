@@ -395,7 +395,7 @@ async function setupStakingPage() {
       document.getElementById('totalPendingRewards').textContent = 
         `${parseFloat(vntRewards).toFixed(4)} VNT + ${parseFloat(usdtRewards).toFixed(4)} USDT`;
       
-      const directRewards = (parseFloat(usdtRewards) * 0.5;
+      const directRewards = (parseFloat(usdtRewards) * 0.5);
       const roiRewards = (parseFloat(usdtRewards) * 0.5);
       
       document.getElementById('directRewards').textContent = `${directRewards.toFixed(4)} USDT`;
